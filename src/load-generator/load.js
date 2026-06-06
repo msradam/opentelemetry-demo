@@ -200,14 +200,17 @@ export async function browserTask() {
     await page.setExtraHTTPHeaders({ baggage: 'synthetic_request=true' });
     if (Math.random() < 0.5) {
       span('browser_change_currency');
-      await page.goto(`${HOST}/cart`, { waitUntil: 'domcontentloaded' });
+      await page.goto(`${HOST}/cart`, { waitUntil: 'load' });
       await page.locator('[name="currency_code"]').selectOption('CHF');
       await page.waitForTimeout(2000);
     } else {
-      span('browser_add_to_cart');
-      await page.goto(`${HOST}/`, { waitUntil: 'domcontentloaded' });
-      await page.locator('p:has-text("Roof Binoculars")').click();
-      await page.locator('button:has-text("Add To Cart")').click();
+      // k6/browser uses standard CSS selectors (no Playwright :has-text), so
+      // drive the RUM-instrumented frontend by navigation rather than by text.
+      const product = choice(products);
+      span('browser_browse_product', { 'product.id': product });
+      await page.goto(`${HOST}/`, { waitUntil: 'load' });
+      await page.waitForTimeout(1000);
+      await page.goto(`${HOST}/product/${product}`, { waitUntil: 'load' });
       await page.waitForTimeout(2000);
     }
   } catch (e) {
