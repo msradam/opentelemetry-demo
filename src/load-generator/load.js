@@ -194,6 +194,11 @@ export function apiTask() {
   sleep(randInt(1, 10));
 }
 
+// The frontend loads its web SDK via an async import and the OTLP exporter
+// batches on a timer, so RUM only leaves the page seconds after the load
+// event; closing sooner silently drops every frontend-web signal.
+const RUM_FLUSH_MS = 5000;
+
 export async function browserTask() {
   const page = await browser.newPage();
   try {
@@ -202,16 +207,16 @@ export async function browserTask() {
       span('browser_change_currency');
       await page.goto(`${HOST}/cart`, { waitUntil: 'load' });
       await page.locator('[name="currency_code"]').selectOption('CHF');
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(RUM_FLUSH_MS);
     } else {
       // k6/browser uses standard CSS selectors (no Playwright :has-text), so
       // drive the RUM-instrumented frontend by navigation rather than by text.
       const product = choice(products);
       span('browser_browse_product', { 'product.id': product });
       await page.goto(`${HOST}/`, { waitUntil: 'load' });
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(RUM_FLUSH_MS);
       await page.goto(`${HOST}/product/${product}`, { waitUntil: 'load' });
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(RUM_FLUSH_MS);
     }
   } catch (e) {
     console.error(`browser task error: ${e}`);

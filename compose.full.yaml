@@ -127,6 +127,26 @@ services:
       kafka:
         condition: service_healthy
 
+  # Patch load generator to drive browser traffic (frontend-web RUM) in full
+  # mode. Uses a distinct image tag built with Chromium; the default/minimal
+  # load-generator image stays slim.
+  load-generator:
+    image: ${IMAGE_NAME}:${DEMO_VERSION}-load-generator-browser
+    build:
+      args:
+        WITH_BROWSER: "true"
+    deploy:
+      resources:
+        limits:
+          # Long-lived headless Chromium creeps toward ~500M driving the full
+          # app; at 512M the kernel OOM killer snipes its child processes and
+          # stalls all traffic from the shared container.
+          memory: 1G
+    environment:
+      - LOADGEN_BROWSER_TRAFFIC_ENABLED=true
+      - K6_BROWSER_HEADLESS=true
+      - K6_BROWSER_ARGS=no-sandbox
+
   # Patch otel-collector to add Kafka metrics receiver
   otel-collector:
     command:
@@ -138,5 +158,6 @@ services:
       - ${OTEL_COLLECTOR_CONFIG}:/etc/otelcol-config.yml
       - ${OTEL_COLLECTOR_CONFIG_FULL}:/etc/otelcol-config-full.yml
       - ${OTEL_COLLECTOR_CONFIG_EXTRAS}:/etc/otelcol-config-extras.yml
+      - loadgen-logs:/loadgen-logs:ro
     environment:
       - KAFKA_ADDR
