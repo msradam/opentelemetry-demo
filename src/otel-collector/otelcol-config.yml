@@ -24,7 +24,12 @@ receivers:
   file_log/loadgen:
     include:
       - /loadgen-logs/k6.log
-    start_at: beginning
+    # Tail new lines only. start_at:beginning re-reads the whole (persistent,
+    # growing) log on every collector restart, bursting the memory-limited
+    # collector and causing it to refuse data across all pipelines.
+    start_at: end
+    retry_on_failure:
+      enabled: true
     operators:
       - type: json_parser
         parse_from: body
