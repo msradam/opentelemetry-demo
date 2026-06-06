@@ -1,0 +1,14 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# k6 load generator with an embedded Chromium, used only by the benchmark to
+# compare browser-traffic memory against Locust on equal footing (both engines
+# running their own Chromium). Production browser traffic should instead offload
+# Chromium to a separate capped container via crocochrome + K6_BROWSER_WS_URL.
+ARG K6_IMAGE=ghcr.io/open-telemetry/demo:latest-load-generator
+FROM ${K6_IMAGE}
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends chromium fonts-liberation ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+ENV K6_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
