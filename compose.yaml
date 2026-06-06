@@ -443,6 +443,14 @@ services:
       - K6_OTEL_GRPC_EXPORTER_ENDPOINT=${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
       - K6_OTEL_GRPC_EXPORTER_INSECURE=true
       - K6_OTEL_SERVICE_NAME=load-generator
+      # Export metrics on a 60s cadence (matching a typical OTel SDK reader) so
+      # the load generator does not flood the metrics pipeline; target_info still
+      # appears for the telemetry tests.
+      - K6_OTEL_EXPORT_INTERVAL=60s
+      # Drop the high-cardinality url/name/group tags so k6's HTTP metrics
+      # collapse to a handful of series instead of one per distinct URL, which
+      # otherwise bursts the memory-limited collector.
+      - K6_SYSTEM_TAGS=proto,method,status,scenario
       - FLAGD_HOST
       - FLAGD_OFREP_PORT
     healthcheck:
