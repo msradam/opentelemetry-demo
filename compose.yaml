@@ -308,6 +308,11 @@ services:
   frontend-proxy:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-frontend-proxy
     container_name: frontend-proxy
+    # envoy.tmpl.yaml is baked into this image and changed with the k6
+    # migration (LOCUST_* -> LOADGEN_* variables); the registry still serves
+    # the old template under this tag, and pulling it makes envsubst emit an
+    # empty loadgen cluster address, crash-looping Envoy.
+    pull_policy: build
     build:
       context: ./
       dockerfile: ${FRONTEND_PROXY_DOCKERFILE}
@@ -324,8 +329,8 @@ services:
     environment:
       - FRONTEND_PORT
       - FRONTEND_HOST
-      - LOCUST_WEB_HOST
-      - LOCUST_WEB_PORT
+      - LOADGEN_WEB_HOST
+      - LOADGEN_WEB_PORT
       - GRAFANA_PORT
       - GRAFANA_HOST
       - JAEGER_UI_PORT
@@ -405,6 +410,10 @@ services:
   load-generator:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-load-generator
     container_name: load-generator
+    # The registry still serves the Locust-era image under this tag; a fresh
+    # host (or CI after a prune) would pull that instead of building the k6
+    # generator from source.
+    pull_policy: build
     build:
       context: ./
       dockerfile: ${LOAD_GENERATOR_DOCKERFILE}
@@ -413,32 +422,37 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1500M
+          memory: 200M
     restart: unless-stopped
     ports:
-      - "${LOCUST_WEB_PORT}"
+      - "${LOADGEN_WEB_PORT}"
     environment:
-      - LOCUST_WEB_PORT
-      - LOCUST_USERS
-      - LOCUST_HOST
-      - LOCUST_HEADLESS
-      - LOCUST_AUTOSTART
-      - LOCUST_BROWSER_TRAFFIC_ENABLED=true
-      - OTEL_EXPORTER_OTLP_ENDPOINT
-      - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
-      - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=low
-      - OTEL_SERVICE_NAME=load-generator
-      - PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
-      - LOCUST_WEB_HOST=0.0.0.0
+      - LOADGEN_HOST
+      - LOADGEN_VUS
+      - LOADGEN_BROWSER_TRAFFIC_ENABLED
+      - LOADGEN_TRACING_ENDPOINT=${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
+      # k6 real-time outputs: OTLP metrics + the built-in web dashboard
+      # (K6_WEB_DASHBOARD starts it; also listing it in K6_OUT would start it
+      # twice and fail the second bind)
+      - K6_OUT=opentelemetry
+      - K6_WEB_DASHBOARD=true
+      - K6_WEB_DASHBOARD_HOST=0.0.0.0
+      - K6_WEB_DASHBOARD_PORT=${LOADGEN_WEB_PORT}
+      # k6 has no native OTLP log export; the entrypoint writes JSON logs to the
+      # shared loadgen-logs volume, which the collector tails via filelog.
+      - K6_OTEL_GRPC_EXPORTER_ENDPOINT=${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_GRPC}
+      - K6_OTEL_GRPC_EXPORTER_INSECURE=true
+      - K6_OTEL_SERVICE_NAME=load-generator
       - FLAGD_HOST
-      - FLAGD_PORT
       - FLAGD_OFREP_PORT
     healthcheck:
-      test: ["CMD", "python3", "-c", "import socket; s=socket.create_connection(('localhost',${LOCUST_WEB_PORT}),2); s.close()"]
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/${LOADGEN_WEB_PORT} && exec 3>&-"]
       start_period: 30s
       interval: 5s
       timeout: 5s
       retries: 20
+    volumes:
+      - loadgen-logs:/loadgen-logs
     depends_on:
       frontend:
         condition: service_healthy
@@ -825,6 +839,7 @@ services:
       - ${DOCKER_SOCK}:/var/run/docker.sock:ro
       - ${OTEL_COLLECTOR_CONFIG}:/etc/otelcol-config.yml
       - ${OTEL_COLLECTOR_CONFIG_EXTRAS}:/etc/otelcol-config-extras.yml
+      - loadgen-logs:/loadgen-logs:ro
     ports:
       - "${OTEL_COLLECTOR_PORT_GRPC}"
       - "${OTEL_COLLECTOR_PORT_HTTP}"
@@ -842,3 +857,8 @@ services:
       - POSTGRES_PORT
       - POSTGRES_MONITORING_PASSWORD
       - GOMEMLIMIT=160MiB
+
+volumes:
+  # k6 writes JSON logs here; the collector's filelog receiver tails them so the
+  # load generator's logs reach the logs pipeline (k6 has no OTLP log export).
+  loadgen-logs:

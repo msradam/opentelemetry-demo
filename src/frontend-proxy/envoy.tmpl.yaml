@@ -36,8 +36,14 @@ static_resources:
                       domains:
                         - "*"
                       routes:
+                        # The k6 dashboard SPA lives at /ui/ (relative assets)
+                        # and reads its data endpoint from ?endpoint=; its own
+                        # root redirect targets the absolute /ui, which would
+                        # escape the /loadgen/ prefix.
                         - match: { path: "/loadgen" }
-                          redirect: { path_redirect: "/loadgen/" }
+                          redirect: { path_redirect: "/loadgen/ui/?endpoint=/loadgen/" }
+                        - match: { path: "/loadgen/" }
+                          redirect: { path_redirect: "/loadgen/ui/?endpoint=/loadgen/" }
                         - match: { prefix: "/loadgen/" }
                           route: { cluster: loadgen, prefix_rewrite: "/" }
                         - match: { prefix: "/otlp-http/" }
@@ -255,8 +261,8 @@ static_resources:
               - endpoint:
                   address:
                     socket_address:
-                      address: ${LOCUST_WEB_HOST}
-                      port_value: ${LOCUST_WEB_PORT}
+                      address: ${LOADGEN_WEB_HOST}
+                      port_value: ${LOADGEN_WEB_PORT}
     - name: grafana
       type: STRICT_DNS
       lb_policy: ROUND_ROBIN

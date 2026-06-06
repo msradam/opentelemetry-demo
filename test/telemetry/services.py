@@ -37,7 +37,7 @@ SIGNAL_MATRIX = {
 
 # Services excluded from minimal scope:
 # - accounting, fraud-detection, kafka: require Kafka (not in minimal compose)
-# - frontend-web: requires LOCUST_BROWSER_TRAFFIC_ENABLED=true (disabled in minimal)
+# - frontend-web: requires LOADGEN_BROWSER_TRAFFIC_ENABLED=true (disabled in minimal)
 #   without browser traffic, so traces don't appear within the test timeout
 FULL_ONLY_SERVICES = {"accounting", "fraud-detection", "frontend-web", "kafka"}
 

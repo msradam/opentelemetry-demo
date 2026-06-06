@@ -34,6 +34,7 @@ out/
 build
 next-env.d.ts
 vendor/
+!src/load-generator/vendor/
 composer.lock
 .venv
 .dockerhub.env

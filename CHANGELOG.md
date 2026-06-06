@@ -7,6 +7,11 @@ the release.
 
 ## Unreleased
 
+* [load-generator] Replace Locust with k6. The generator is a custom k6 v2
+  binary (with `xk6-client-tracing`) that emits traces, metrics, and logs as
+  `service.name=load-generator`, exposes the k6 web dashboard at `/loadgen/`,
+  and drops the embedded Chromium/Python (memory limit 1500M to 200M)
+  ([#2685](https://github.com/open-telemetry/opentelemetry-demo/issues/2685))
 * [frontend] Avoid hardcoded `localhost:8080` image URLs during SSR and
   normalize leading slashes in the custom image loader
   ([#3582](https://github.com/open-telemetry/opentelemetry-demo/pull/3582))

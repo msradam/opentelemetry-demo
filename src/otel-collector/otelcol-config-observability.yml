@@ -50,5 +50,7 @@ service:
       exporters: [debug, otlp_http/prometheus]
     logs:
       exporters: [debug, opensearch]
+    logs/loadgen:
+      exporters: [debug, opensearch]
     profiles:
       exporters: [debug, otlp_grpc/firepit]
