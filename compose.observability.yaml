@@ -29,7 +29,12 @@ services:
       - PROMETHEUS_ADDR
       - OTEL_COLLECTOR_HOST
       - OTEL_COLLECTOR_PORT_HTTP
-      - MEMORY_MAX_TRACES=25000
+      # On fast hosts the demo produces enough traces to wrap a 25k buffer in
+      # minutes, evicting low-volume services (ad, recommendation,
+      # frontend-web) from the store while the telemetry tests are still
+      # polling for them. Jaeger idles near 80MiB of its 1200M limit, so a
+      # larger buffer is nearly free.
+      - MEMORY_MAX_TRACES=100000
     volumes:
       - ./src/jaeger/config.yml:/etc/jaeger/config.yml
     logging:
