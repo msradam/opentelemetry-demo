@@ -835,7 +835,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 200M
+          # The v0.155 collector with the full pipeline set idles near the old
+          # 200M limit (~180MiB RSS with GOMEMLIMIT=160MiB), leaving no burst
+          # headroom before the cgroup kills it. Funded many times over by the
+          # load generator's 1500M to 200M reduction.
+          memory: 300M
     restart: unless-stopped
     command:
       - --config=/etc/otelcol-config.yml

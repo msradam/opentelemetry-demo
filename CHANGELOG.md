@@ -16,6 +16,10 @@ the release.
   the web SDK's OTLP export POST is fetch-instrumented, so its CORS preflight
   requests `traceparent` and `baggage`; list them in `allowed_headers`
   ([#2685](https://github.com/open-telemetry/opentelemetry-demo/issues/2685))
+* [otel-collector] Raise the memory limit from 200M to 300M: the v0.155
+  collector with the full pipeline set idles near the old limit and gets OOM
+  killed under ingest bursts
+  ([#2685](https://github.com/open-telemetry/opentelemetry-demo/issues/2685))
 * [frontend] Avoid hardcoded `localhost:8080` image URLs during SSR and
   normalize leading slashes in the custom image loader
   ([#3582](https://github.com/open-telemetry/opentelemetry-demo/pull/3582))
