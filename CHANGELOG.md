@@ -12,6 +12,10 @@ the release.
   `service.name=load-generator`, exposes the k6 web dashboard at `/loadgen/`,
   and drops the embedded Chromium/Python (memory limit 1500M to 200M)
   ([#2685](https://github.com/open-telemetry/opentelemetry-demo/issues/2685))
+* [otel-collector] Fix silently dropped browser (`frontend-web`) telemetry:
+  the web SDK's OTLP export POST is fetch-instrumented, so its CORS preflight
+  requests `traceparent` and `baggage`; list them in `allowed_headers`
+  ([#2685](https://github.com/open-telemetry/opentelemetry-demo/issues/2685))
 * [frontend] Avoid hardcoded `localhost:8080` image URLs during SSR and
   normalize leading slashes in the custom image loader
   ([#3582](https://github.com/open-telemetry/opentelemetry-demo/pull/3582))

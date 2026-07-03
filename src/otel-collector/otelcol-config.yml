@@ -19,6 +19,18 @@ receivers:
           allowed_origins:
             - "http://*"
             - "https://*"
+          # The web SDK's OTLP export POST is itself fetch-instrumented
+          # (propagateTraceHeaderCorsUrls: /.*/), so its preflight requests
+          # traceparent and baggage on top of content-type. A preflight asking
+          # for any header missing from this list is rejected outright, and all
+          # frontend-web RUM telemetry is silently dropped.
+          allowed_headers:
+            - Origin
+            - Accept
+            - X-Requested-With
+            - Content-Type
+            - traceparent
+            - baggage
   # The k6 load generator has no OTLP log export; tail its JSON logs from the
   # shared volume so they reach the logs pipeline like any other service.
   file_log/loadgen:
